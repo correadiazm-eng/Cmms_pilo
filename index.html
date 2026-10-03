@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#10243b">
+    <meta name="description" content="Panel estático para analizar órdenes de trabajo de mantenimiento CMMS/GMAO.">
+    <title>GMAO | Inteligencia de mantenimiento</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#" aria-label="GMAO, inicio">
+          <span class="brand-mark" aria-hidden="true">G</span>
+          <span><strong>GMAO</strong><small>INTELLIGENCE</small></span>
+        </a>
+
+        <div class="side-label">ESPACIO DE TRABAJO</div>
+        <label class="field-label" for="dataset-select">Dataset activo</label>
+        <select id="dataset-select" class="select-control" aria-label="Dataset activo"></select>
+        <div id="dataset-meta" class="dataset-meta">Preparando datos de ejemplo…</div>
+
+        <label class="upload-zone" for="file-input">
+          <span class="upload-icon" aria-hidden="true">＋</span>
+          <strong>Cargar dataset</strong>
+          <span>Arrastra o selecciona CSV / Excel</span>
+          <small>Los archivos se procesan localmente</small>
+        </label>
+        <input id="file-input" type="file" accept=".csv,.xlsx,.xls" multiple hidden>
+        <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+
+        <div class="side-divider"></div>
+        <div class="side-label">FILTROS DEL ANÁLISIS</div>
+        <label class="field-label" for="maintenance-filter">Tipo de mantenimiento</label>
+        <select id="maintenance-filter" class="select-control"></select>
+        <label class="field-label" for="date-from">Desde</label>
+        <input id="date-from" class="input-control" type="date">
+        <label class="field-label" for="date-to">Hasta</label>
+        <input id="date-to" class="input-control" type="date">
+        <button id="reset-filters" class="text-button" type="button">Restablecer filtros</button>
+
+        <div class="sidebar-bottom">
+          <span class="privacy-dot"></span>
+          <span>Procesamiento 100% local<br><small>Los datos no salen de tu dispositivo</small></span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="breadcrumb">ANÁLISIS <span>/</span> <strong>RESUMEN EJECUTIVO</strong></div>
+          <div class="topbar-actions">
+            <span id="updated-at" class="updated-label">Datos actualizados al cargar</span>
+            <button id="print-report" class="button button-primary" type="button">
+              <span aria-hidden="true">↧</span> Exportar informe PDF
+            </button>
+          </div>
+        </header>
+
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow">GESTIÓN DE ACTIVOS Y MANTENIMIENTO</p>
+            <h1>Desempeño de mantenimiento</h1>
+            <p class="subtitle">Indicadores operacionales, mantenibilidad y prioridades de intervención.</p>
+          </div>
+          <div class="period-badge"><span class="badge-dot"></span><span id="period-label">Período del dataset</span></div>
+        </section>
+
+        <section class="kpi-grid" aria-label="Indicadores principales">
+          <article class="kpi-card">
+            <div class="kpi-top"><span>Órdenes de trabajo</span><span class="kpi-icon icon-blue">▤</span></div>
+            <div id="kpi-orders" class="kpi-value">—</div>
+            <div class="kpi-foot">OT únicas en el período</div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-top"><span>Horas-hombre</span><span class="kpi-icon icon-violet">◷</span></div>
+            <div id="kpi-labor" class="kpi-value">—</div>
+            <div class="kpi-foot">Esfuerzo total registrado</div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-top"><span>Indisponibilidad</span><span class="kpi-icon icon-amber">◴</span></div>
+            <div id="kpi-downtime" class="kpi-value">—</div>
+            <div class="kpi-foot">Horas de downtime acumuladas</div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-top"><span>Costo directo</span><span class="kpi-icon icon-green">$</span></div>
+            <div id="kpi-cost" class="kpi-value">—</div>
+            <div class="kpi-foot">Costo total registrado · CLP</div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-top"><span>MTTR correctivo</span><span class="kpi-icon icon-red">⌁</span></div>
+            <div id="kpi-mttr" class="kpi-value">—</div>
+            <div id="kpi-mttr-foot" class="kpi-foot">Reparaciones válidas</div>
+          </article>
+        </section>
+
+        <section class="section-heading">
+          <div><h2>Resumen operacional</h2><p>Distribución de órdenes y consumo de recursos por estrategia.</p></div>
+          <span class="section-index">01 — 03</span>
+        </section>
+        <section class="chart-grid">
+          <article class="panel">
+            <div class="panel-heading"><div><h3>Órdenes por tipo de mantenimiento</h3><p>Participación en las OT del período</p></div><span class="chart-tag">ACTIVIDAD</span></div>
+            <div id="chart-orders" class="chart" role="img" aria-label="Gráfico de órdenes por tipo de mantenimiento"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><h3>Impacto por estrategia</h3><p>Porcentaje del total en cada dimensión</p></div><span class="chart-tag">RECURSOS</span></div>
+            <div id="chart-impact" class="chart" role="img" aria-label="Gráfico de impacto por tipo de mantenimiento"></div>
+          </article>
+        </section>
+
+        <section class="section-heading">
+          <div><h2>Mantenibilidad y fallas</h2><p>Indicadores de reparación y causas de mayor impacto.</p></div>
+          <span class="section-index">02 — 03</span>
+        </section>
+        <section class="chart-grid">
+          <article class="panel">
+            <div class="panel-heading"><div><h3>MTTR por tipo de equipo</h3><p>Correctivas cerradas con duración válida</p></div><span class="chart-tag">MTTR · H</span></div>
+            <div id="chart-mttr" class="chart" role="img" aria-label="Gráfico de MTTR por tipo de equipo"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><h3>Pareto de modos de falla</h3><p>Top 8 por cantidad de órdenes correctivas</p></div><span class="chart-tag">FRECUENCIA</span></div>
+            <div id="chart-failures" class="chart" role="img" aria-label="Gráfico de modos de falla prioritarios"></div>
+          </article>
+        </section>
+
+        <section class="section-heading">
+          <div><h2>Priorización de activos</h2><p>Jack-Knife normalizado: frecuencia de fallas frente a MTTR de downtime.</p></div>
+          <span class="section-index">03 — 03</span>
+        </section>
+        <section class="chart-grid jackknife-grid">
+          <article class="panel">
+            <div class="panel-heading"><div><h3>Matriz Jack-Knife por equipo</h3><p>Cuadrantes relativos a los promedios del parque</p></div><span class="chart-tag">R* RELATIVO</span></div>
+            <div id="chart-jackknife" class="chart chart-scatter" role="img" aria-label="Diagrama Jack-Knife de equipos"></div>
+            <div class="quadrant-legend">
+              <span><i class="dot dot-grave"></i>Grave</span><span><i class="dot dot-agudo"></i>Agudo</span><span><i class="dot dot-cronico"></i>Crónico</span><span><i class="dot dot-control"></i>Bajo control</span>
+            </div>
+          </article>
+          <article class="panel priority-panel">
+            <div class="panel-heading"><div><h3>Activos prioritarios</h3><p>Ordenados por riesgo técnico relativo</p></div><span class="chart-tag">TOP 8</span></div>
+            <div id="priority-list" class="priority-list"></div>
+            <p class="method-note">R* es un proxy de indisponibilidad relativa; no representa riesgo formal de seguridad o económico.</p>
+          </article>
+        </section>
+
+        <footer class="page-footer">
+          <span>GMAO INTELLIGENCE <i>·</i> Informe generado desde el dataset seleccionado</span>
+          <span id="footer-date"></span>
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>
